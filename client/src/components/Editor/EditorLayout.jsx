@@ -4,7 +4,7 @@ import { useVideoSync } from '../../hooks/useVideoSync.js';
 import VideoPlayer from '../Player/VideoPlayer.jsx';
 import EditorPanel from './EditorPanel.jsx';
 
-export default function EditorLayout({ videoUrl, filename, fileId, targetLanguage, videoDuration }) {
+export default function EditorLayout({ videoUrl, filename, fileId, targetLanguage, videoDuration, selectedVoice }) {
   const { captions } = useCaptions();
 
   const {
@@ -62,6 +62,7 @@ export default function EditorLayout({ videoUrl, filename, fileId, targetLanguag
           currentTime={currentTime}
           fileId={fileId}
           targetLanguage={targetLanguage}
+          selectedVoice={selectedVoice}
         />
       </div>
     </div>

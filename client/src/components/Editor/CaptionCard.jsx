@@ -10,7 +10,7 @@ function formatShort(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function CaptionCard({ caption, index, isActive, onUpdate, onDelete, onSeek, fileId, targetLanguage }) {
+export default function CaptionCard({ caption, index, isActive, onUpdate, onDelete, onSeek, fileId, targetLanguage, selectedVoice }) {
   const isCC = caption.type === 'cc';
   const [isGenerating, setIsGenerating] = useState(false);
   const [justGenerated, setJustGenerated] = useState(false);
@@ -28,7 +28,8 @@ export default function CaptionCard({ caption, index, isActive, onUpdate, onDele
           text: caption.text,
           fileId: fileId,
           captionId: caption.id,
-          targetLanguage: targetLanguage || 'Auto-Detect'
+          targetLanguage: targetLanguage || 'Auto-Detect',
+          selectedVoice: selectedVoice
         })
       });
       

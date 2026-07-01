@@ -7,7 +7,7 @@ const { EdgeTTS } = require('node-edge-tts');
 const UPLOAD_DIR = path.join(__dirname, '../uploads');
 
 router.post('/generate', async (req, res) => {
-  const { text, fileId, captionId, targetLanguage } = req.body;
+  const { text, fileId, captionId, targetLanguage, selectedVoice } = req.body;
 
   if (!text || !fileId || !captionId) {
     return res.status(400).json({ error: 'Missing required parameters' });
@@ -15,35 +15,35 @@ router.post('/generate', async (req, res) => {
 
   try {
     const voiceMap = {
-      'Hindi': 'hi-IN-SwaraNeural',
-      'Telugu': 'te-IN-ShrutiNeural',
-      'Tamil': 'ta-IN-PallaviNeural',
-      'Spanish': 'es-ES-ElviraNeural',
-      'French': 'fr-FR-DeniseNeural',
-      'Japanese': 'ja-JP-NanamiNeural',
-      'English': 'en-US-AriaNeural',
-      'Korean': 'ko-KR-SunHiNeural',
-      'Chinese': 'zh-CN-XiaoxiaoNeural',
-      'Portuguese': 'pt-BR-FranciscaNeural',
-      'German': 'de-DE-KatjaNeural',
-      'Arabic': 'ar-SA-ZariyahNeural',
-      'Russian': 'ru-RU-SvetlanaNeural',
-      'Italian': 'it-IT-ElsaNeural',
-      'Kannada': 'kn-IN-SapnaNeural',
-      'Gujarati': 'gu-IN-DhwaniNeural',
-      'Marathi': 'mr-IN-AarohiNeural',
-      'Bengali': 'bn-IN-TanishaaNeural',
-      'Malayalam': 'ml-IN-SobhanaNeural',
-      'Urdu': 'ur-PK-UzmaNeural',
+      'Hindi': 'hi-IN-MadhurNeural',
+      'Telugu': 'te-IN-MohanNeural',
+      'Tamil': 'ta-IN-ValluvarNeural',
+      'Spanish': 'es-ES-AlvaroNeural',
+      'French': 'fr-FR-HenriNeural',
+      'Japanese': 'ja-JP-KeitaNeural',
+      'English': 'en-US-GuyNeural',
+      'Korean': 'ko-KR-InJoonNeural',
+      'Chinese': 'zh-CN-YunxiNeural',
+      'Portuguese': 'pt-BR-AntonioNeural',
+      'German': 'de-DE-ConradNeural',
+      'Arabic': 'ar-SA-HamedNeural',
+      'Russian': 'ru-RU-DmitryNeural',
+      'Italian': 'it-IT-ValerioNeural',
+      'Kannada': 'kn-IN-GaganNeural',
+      'Gujarati': 'gu-IN-NiranjanNeural',
+      'Marathi': 'mr-IN-ManoharNeural',
+      'Bengali': 'bn-IN-BashkarNeural',
+      'Malayalam': 'ml-IN-MidhunNeural',
+      'Urdu': 'ur-PK-AsadNeural',
       'Punjabi': 'pa-IN-GurpreetNeural',
-      'Thai': 'th-TH-PremwadeeNeural',
-      'Vietnamese': 'vi-VN-HoaiMyNeural',
-      'Turkish': 'tr-TR-EmelNeural',
-      'Indonesian': 'id-ID-GadisNeural',
-      'Dutch': 'nl-NL-ColetteNeural',
-      'Polish': 'pl-PL-ZofiaNeural',
-      'Swedish': 'sv-SE-SofieNeural',
-      'Auto-Detect': 'en-US-AriaNeural'
+      'Thai': 'th-TH-NiwatNeural',
+      'Vietnamese': 'vi-VN-NamMinhNeural',
+      'Turkish': 'tr-TR-AhmetNeural',
+      'Indonesian': 'id-ID-ArdiNeural',
+      'Dutch': 'nl-NL-MaartenNeural',
+      'Polish': 'pl-PL-MarekNeural',
+      'Swedish': 'sv-SE-MattiasNeural',
+      'Auto-Detect': 'en-US-GuyNeural'
     };
     
     // Clean the text of brackets just like in process.js
@@ -64,22 +64,25 @@ router.post('/generate', async (req, res) => {
     const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF]/.test(cleanText);
     const hasThai = /[\u0E00-\u0E7F]/.test(cleanText);
 
-    let ttsVoice = voiceMap[targetLanguage] || 'en-US-AriaNeural';
-    if (targetLanguage === 'Auto-Detect' || !targetLanguage) {
-      if (hasTamil) ttsVoice = 'ta-IN-PallaviNeural';
-      else if (hasTelugu) ttsVoice = 'te-IN-ShrutiNeural';
-      else if (hasMalayalam) ttsVoice = 'ml-IN-SobhanaNeural';
-      else if (hasBengali) ttsVoice = 'bn-IN-TanishaaNeural';
-      else if (hasKannada) ttsVoice = 'kn-IN-SapnaNeural';
-      else if (hasGujarati) ttsVoice = 'gu-IN-DhwaniNeural';
+    let ttsVoice = voiceMap[targetLanguage] || 'en-US-GuyNeural';
+
+    if (selectedVoice && selectedVoice !== 'Auto-Detect') {
+      ttsVoice = selectedVoice;
+    } else if (targetLanguage === 'Auto-Detect' || !targetLanguage) {
+      if (hasTamil) ttsVoice = 'ta-IN-ValluvarNeural';
+      else if (hasTelugu) ttsVoice = 'te-IN-MohanNeural';
+      else if (hasMalayalam) ttsVoice = 'ml-IN-MidhunNeural';
+      else if (hasBengali) ttsVoice = 'bn-IN-BashkarNeural';
+      else if (hasKannada) ttsVoice = 'kn-IN-GaganNeural';
+      else if (hasGujarati) ttsVoice = 'gu-IN-NiranjanNeural';
       else if (hasPunjabi) ttsVoice = 'pa-IN-GurpreetNeural';
-      else if (hasKorean) ttsVoice = 'ko-KR-SunHiNeural';
-      else if (hasChinese) ttsVoice = 'zh-CN-XiaoxiaoNeural';
-      else if (hasJapanese) ttsVoice = 'ja-JP-NanamiNeural';
-      else if (hasThai) ttsVoice = 'th-TH-PremwadeeNeural';
-      else if (hasArabic) ttsVoice = 'ar-SA-ZariyahNeural';
-      else if (hasHindi) ttsVoice = 'hi-IN-SwaraNeural';
-      else ttsVoice = 'en-US-AriaNeural';
+      else if (hasKorean) ttsVoice = 'ko-KR-InJoonNeural';
+      else if (hasChinese) ttsVoice = 'zh-CN-YunxiNeural';
+      else if (hasJapanese) ttsVoice = 'ja-JP-KeitaNeural';
+      else if (hasThai) ttsVoice = 'th-TH-NiwatNeural';
+      else if (hasArabic) ttsVoice = 'ar-SA-HamedNeural';
+      else if (hasHindi) ttsVoice = 'hi-IN-MadhurNeural';
+      else ttsVoice = 'en-US-GuyNeural';
     }
 
     // Create a unique filename for this manually generated TTS

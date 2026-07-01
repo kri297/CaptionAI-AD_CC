@@ -243,7 +243,7 @@ export default function App() {
       <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#030305' }}>
         <Header phase="editor" filename={filename} fileId={fileId} onReset={handleReset} targetLanguage={targetLanguage} selectedVoice={selectedVoice} setSelectedVoice={setSelectedVoice} />
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          <EditorLayout videoUrl={videoUrl} filename={filename} fileId={fileId} targetLanguage={targetLanguage} videoDuration={videoDuration} />
+          <EditorLayout videoUrl={videoUrl} filename={filename} fileId={fileId} targetLanguage={targetLanguage} videoDuration={videoDuration} selectedVoice={selectedVoice} />
         </div>
         <ExportPanel filename={filename} fileId={fileId} targetLanguage={targetLanguage} deliverables={deliverables} selectedVoice={selectedVoice} />
       </div>
