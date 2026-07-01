@@ -792,6 +792,7 @@ router.post('/process', upload.single('video'), async (req, res) => {
     // 6. Rendering final accessibility assets is now done ON-DEMAND via /api/export/accessible-video
     console.log('  ⏭️ Skipping pre-rendering of video assets to save time and prevent timeouts.');
     let renderingError = null;
+    const fileId = path.basename(tempPath);
 
     // 7. Construct URLs
     const host = req.get('host') || `localhost:${process.env.PORT || 3001}`;
