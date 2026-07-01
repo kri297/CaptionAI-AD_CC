@@ -789,18 +789,9 @@ router.post('/process', upload.single('video'), async (req, res) => {
       }
     }
 
-    // 6. Generate and render deliverables (SRT, Mixed Audio, and Accessible Video)
-    console.log('  🎥 Rendering final accessibility assets...');
-    const fileId = path.basename(tempPath);
+    // 6. Rendering final accessibility assets is now done ON-DEMAND via /api/export/accessible-video
+    console.log('  ⏭️ Skipping pre-rendering of video assets to save time and prevent timeouts.');
     let renderingError = null;
-    let deliverablesFiles = {};
-    try {
-      deliverablesFiles = await renderAccessibilityAssets(fileId, tempPath, cc, ac, videoDuration, targetLanguage, ttsVoice);
-      console.log('  ✅ Accessibility assets rendered successfully.');
-    } catch (renderErr) {
-      console.error('  ⚠️ Failed to render accessibility assets:', renderErr);
-      renderingError = renderErr.message || String(renderErr);
-    }
 
     // 7. Construct URLs
     const host = req.get('host') || `localhost:${process.env.PORT || 3001}`;
@@ -850,11 +841,7 @@ router.post('/process', upload.single('video'), async (req, res) => {
       };
     });
 
-    const downloadLinks = {
-      srt_captions: deliverablesFiles.srt ? `${baseUrl}/uploads/${deliverablesFiles.srt}` : '',
-      mixed_audio_only: deliverablesFiles.mixedAudio ? `${baseUrl}/uploads/${deliverablesFiles.mixedAudio}` : '',
-      final_accessible_video: deliverablesFiles.accessibleVideo ? `${baseUrl}/uploads/${deliverablesFiles.accessibleVideo}` : ''
-    };
+    const downloadLinks = {};
 
     // 8. Cleanup Gemini file (best-effort)
     ai.files.delete({ name: geminiFile.name }).catch(() => {});
