@@ -87,7 +87,7 @@ export default function Header({ phase, filename, fileId, onReset, children, tar
     setExportingVideo(true);
     
     try {
-      const response = await fetch('/api/export/video', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/export/video`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -119,7 +119,7 @@ export default function Header({ phase, filename, fileId, onReset, children, tar
   const handleAdScript = async () => {
     if (!captionCtx) return;
     try {
-      const response = await fetch('/api/export/ad-script', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/export/ad-script`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ captions: captionCtx.captions })
@@ -138,7 +138,7 @@ export default function Header({ phase, filename, fileId, onReset, children, tar
     if (!captionCtx || !fileId || downloadingAdAudio) return;
     setDownloadingAdAudio(true);
     try {
-      const response = await fetch('/api/export/ad-audio', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/export/ad-audio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId, captions: captionCtx.captions, targetLanguage, selectedVoice })
@@ -169,7 +169,7 @@ export default function Header({ phase, filename, fileId, onReset, children, tar
     if (!captionCtx || !fileId || downloadingMixedAudio) return;
     setDownloadingMixedAudio(true);
     try {
-      const response = await fetch('/api/export/mixed-audio', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/export/mixed-audio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId, captions: captionCtx.captions, targetLanguage, selectedVoice })

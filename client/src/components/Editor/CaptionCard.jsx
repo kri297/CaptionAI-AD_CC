@@ -21,7 +21,7 @@ export default function CaptionCard({ caption, index, isActive, onUpdate, onDele
     if (!caption.text || isGenerating || !fileId) return;
     try {
       setIsGenerating(true);
-      const res = await fetch('/api/tts/generate', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/tts/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

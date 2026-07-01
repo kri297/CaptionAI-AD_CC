@@ -115,7 +115,7 @@ export default function App() {
         body.append('apiKey', apiKey);
       }
 
-      const res = await fetch('/api/process', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/process`, {
         method: 'POST',
         body,
       });

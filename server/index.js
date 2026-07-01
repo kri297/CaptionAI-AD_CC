@@ -9,10 +9,7 @@ dns.setDefaultResultOrder('ipv4first');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:4173'],
-  credentials: true,
-}));
+app.use(cors());
 
 app.use(express.json({ limit: '10mb' }));
 

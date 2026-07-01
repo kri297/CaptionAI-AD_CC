@@ -78,7 +78,7 @@ export default function ExportPanel({ filename, fileId, targetLanguage, delivera
       setMixProgress(0);
       const stopProgress = simulateProgress(setMixProgress);
       
-      const res = await fetch('/api/export/mixed-audio', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/export/mixed-audio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId, captions, targetLanguage, selectedVoice })
@@ -112,7 +112,7 @@ export default function ExportPanel({ filename, fileId, targetLanguage, delivera
       setVideoProgress(0);
       const stopProgress = simulateProgress(setVideoProgress);
       
-      const res = await fetch('/api/export/accessible-video', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/export/accessible-video`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId, captions, targetLanguage, selectedVoice })
@@ -146,7 +146,7 @@ export default function ExportPanel({ filename, fileId, targetLanguage, delivera
       setAiProgress(0);
       const stopProgress = simulateProgress(setAiProgress);
       
-      const res = await fetch('/api/export/ad-audio', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/export/ad-audio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fileId, captions, targetLanguage, selectedVoice })
