@@ -57,7 +57,8 @@ export default function CaptionCard({ caption, index, isActive, onUpdate, onDele
       return;
     }
     
-    const audio = new Audio(`/uploads/${caption.audioFile}`);
+    const audioUrl = `${import.meta.env.VITE_API_URL || ''}/uploads/${caption.audioFile}`;
+    const audio = new Audio(audioUrl);
     audioRef.current = audio;
     audio.play();
     setIsPlaying(true);

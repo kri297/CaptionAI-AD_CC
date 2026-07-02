@@ -738,18 +738,18 @@ router.post('/accessible-video', async (req, res) => {
       .outputOptions(['-map [final_aout]'])
       .save(outputWavPath)
       .on('end', () => {
-         // Now run the final video command
+         // Now run the final video command using copy codec to prevent Render timeouts
          ffmpeg(inputVideoPath)
           .input(outputWavPath)
+          .input(srtPath)
           .outputOptions([
-            '-c:v libx264',
-            '-preset ultrafast',
-            '-crf 23',
             '-map 0:v',
             '-map 1:a',
-            `-vf subtitles=${relativeSrtPath}:force_style='${forceStyle}'`,
+            '-map 2:0',
+            '-c:v copy',
             '-c:a aac',
             '-b:a 192k',
+            '-c:s mov_text',
             '-shortest'
           ])
           .save(finalVideoPath)
