@@ -6,6 +6,19 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
 const { EdgeTTS } = require('node-edge-tts');
+const googleTTS = require('google-tts-api');
+
+const GOOGLE_TTS_VOICES = { 'Punjabi': 'pa' };
+async function generateTtsFile(text, voice, outputPath) {
+  if (GOOGLE_TTS_VOICES[voice]) {
+    const base64 = await googleTTS.getAudioBase64(text, { lang: GOOGLE_TTS_VOICES[voice], slow: false });
+    fs.writeFileSync(outputPath, Buffer.from(base64, 'base64'));
+  } else {
+    const tts = new EdgeTTS({ voice });
+    await tts.ttsPromise(text, outputPath);
+  }
+}
+
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
@@ -47,13 +60,24 @@ function parseTime(t) {
 
 async function ensureTtsAudio(fileId, captions, targetLanguage, selectedVoice) {
   const voiceMap = {
+    // Indian & South Asian
     'Hindi': 'hi-IN-MadhurNeural',
     'Telugu': 'te-IN-MohanNeural',
     'Tamil': 'ta-IN-ValluvarNeural',
+    'Kannada': 'kn-IN-GaganNeural',
+    'Malayalam': 'ml-IN-MidhunNeural',
+    'Bengali': 'bn-IN-BashkarNeural',
+    'Gujarati': 'gu-IN-NiranjanNeural',
+    'Marathi': 'mr-IN-ManoharNeural',
+    'Urdu': 'ur-PK-AsadNeural',
+    'Nepali': 'ne-NP-SagarNeural',
+    'Sinhala': 'si-LK-SameeraNeural',
+    'Punjabi': 'Punjabi',  // Google TTS fallback marker
+    // Popular
+    'English': 'en-US-GuyNeural',
     'Spanish': 'es-ES-AlvaroNeural',
     'French': 'fr-FR-HenriNeural',
     'Japanese': 'ja-JP-KeitaNeural',
-    'English': 'en-US-GuyNeural',
     'Korean': 'ko-KR-InJoonNeural',
     'Chinese': 'zh-CN-YunxiNeural',
     'Portuguese': 'pt-BR-AntonioNeural',
@@ -61,20 +85,41 @@ async function ensureTtsAudio(fileId, captions, targetLanguage, selectedVoice) {
     'Arabic': 'ar-SA-HamedNeural',
     'Russian': 'ru-RU-DmitryNeural',
     'Italian': 'it-IT-ValerioNeural',
-    'Kannada': 'kn-IN-GaganNeural',
-    'Gujarati': 'gu-IN-NiranjanNeural',
-    'Marathi': 'mr-IN-ManoharNeural',
-    'Bengali': 'bn-IN-BashkarNeural',
-    'Malayalam': 'ml-IN-MidhunNeural',
-    'Urdu': 'ur-PK-AsadNeural',
-    'Punjabi': 'pa-IN-GurpreetNeural',
+    // Asian
     'Thai': 'th-TH-NiwatNeural',
     'Vietnamese': 'vi-VN-NamMinhNeural',
-    'Turkish': 'tr-TR-AhmetNeural',
     'Indonesian': 'id-ID-ArdiNeural',
+    'Malay': 'ms-MY-OsmanNeural',
+    'Filipino': 'fil-PH-BlessicaNeural',
+    'Khmer': 'km-KH-PisethNeural',
+    'Burmese': 'my-MM-ThihaNeural',
+    // European
     'Dutch': 'nl-NL-MaartenNeural',
     'Polish': 'pl-PL-MarekNeural',
     'Swedish': 'sv-SE-MattiasNeural',
+    'Danish': 'da-DK-JeppeNeural',
+    'Finnish': 'fi-FI-HarriNeural',
+    'Norwegian': 'nb-NO-FinnNeural',
+    'Greek': 'el-GR-NestorasNeural',
+    'Czech': 'cs-CZ-AntoninNeural',
+    'Romanian': 'ro-RO-EmilNeural',
+    'Hungarian': 'hu-HU-TamasNeural',
+    'Ukrainian': 'uk-UA-OstapNeural',
+    'Croatian': 'hr-HR-SreckoNeural',
+    'Slovak': 'sk-SK-LukasNeural',
+    'Catalan': 'ca-ES-EnricNeural',
+    'Serbian': 'sr-RS-NicholasNeural',
+    'Latvian': 'lv-LV-NilsNeural',
+    'Lithuanian': 'lt-LT-LeonasNeural',
+    'Icelandic': 'is-IS-GunnarNeural',
+    // African
+    'Afrikaans': 'af-ZA-WillemNeural',
+    'Swahili': 'sw-KE-RafikiNeural',
+    'Amharic': 'am-ET-AmehaNeural',
+    // Middle Eastern
+    'Hebrew': 'he-IL-AvriNeural',
+    // Celtic
+    'Welsh': 'cy-GB-AledNeural',
     'Auto-Detect': 'en-US-GuyNeural'
   };
 
@@ -97,11 +142,17 @@ async function ensureTtsAudio(fileId, captions, targetLanguage, selectedVoice) {
     const hasKannada = /[\u0C80-\u0CFF]/.test(sampleText);
     const hasGujarati = /[\u0A80-\u0AFF]/.test(sampleText);
     const hasPunjabi = /[\u0A00-\u0A7F]/.test(sampleText);
+    const hasSinhala = /[\u0D80-\u0DFF]/.test(sampleText);
+    const hasArabic = /[\u0600-\u06FF]/.test(sampleText);
+    const hasHebrew = /[\u0590-\u05FF]/.test(sampleText);
     const hasKorean = /[\uAC00-\uD7AF\u3130-\u318F]/.test(sampleText);
     const hasChinese = /[\u4E00-\u9FFF\u3400-\u4DBF]/.test(sampleText);
     const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF]/.test(sampleText);
     const hasThai = /[\u0E00-\u0E7F]/.test(sampleText);
-    const hasArabic = /[\u0600-\u06FF]/.test(sampleText);
+    const hasKhmer = /[\u1780-\u17FF]/.test(sampleText);
+    const hasMyanmar = /[\u1000-\u109F]/.test(sampleText);
+    const hasAmharic = /[\u1200-\u137F]/.test(sampleText);
+    const hasGreek = /[\u0370-\u03FF]/.test(sampleText);
     const hasHindi = /[\u0900-\u097F]/.test(sampleText);
 
     if (hasTamil) ttsVoice = 'ta-IN-ValluvarNeural';
@@ -110,19 +161,23 @@ async function ensureTtsAudio(fileId, captions, targetLanguage, selectedVoice) {
     else if (hasBengali) ttsVoice = 'bn-IN-BashkarNeural';
     else if (hasKannada) ttsVoice = 'kn-IN-GaganNeural';
     else if (hasGujarati) ttsVoice = 'gu-IN-NiranjanNeural';
-    else if (hasPunjabi) ttsVoice = 'pa-IN-GurpreetNeural';
+    else if (hasPunjabi) ttsVoice = 'Punjabi';
+    else if (hasSinhala) ttsVoice = 'si-LK-SameeraNeural';
     else if (hasKorean) ttsVoice = 'ko-KR-InJoonNeural';
     else if (hasChinese) ttsVoice = 'zh-CN-YunxiNeural';
     else if (hasJapanese) ttsVoice = 'ja-JP-KeitaNeural';
     else if (hasThai) ttsVoice = 'th-TH-NiwatNeural';
+    else if (hasKhmer) ttsVoice = 'km-KH-PisethNeural';
+    else if (hasMyanmar) ttsVoice = 'my-MM-ThihaNeural';
     else if (hasArabic) ttsVoice = 'ar-SA-HamedNeural';
+    else if (hasHebrew) ttsVoice = 'he-IL-AvriNeural';
+    else if (hasAmharic) ttsVoice = 'am-ET-AmehaNeural';
+    else if (hasGreek) ttsVoice = 'el-GR-NestorasNeural';
     else if (hasHindi) ttsVoice = 'hi-IN-MadhurNeural';
     else ttsVoice = 'en-US-GuyNeural';
   }
 
   const cleanFileId = path.basename(fileId).replace(/\.[^/.]+$/, ''); // Remove extension
-
-  const tts = new EdgeTTS({ voice: ttsVoice });
 
   for (let i = 0; i < captions.length; i++) {
     const c = captions[i];
@@ -137,10 +192,11 @@ async function ensureTtsAudio(fileId, captions, targetLanguage, selectedVoice) {
             const ttsFilename = `${cleanFileId}_manual_ad_${c.id || i}_${Date.now()}.mp3`;
             adPath = path.join(UPLOAD_DIR, ttsFilename);
             console.log(`  🔊 Auto-generating missing TTS for segment ${i}: "${text}" using voice ${ttsVoice}`);
-            await tts.ttsPromise(text, adPath);
+            
+            await generateTtsFile(text, ttsVoice, adPath);
             c.audioFile = ttsFilename; // Update the reference
-          } catch (ttsErr) {
-            console.error(`  ⚠️ Auto-generation of TTS failed for segment ${i}:`, ttsErr.message);
+          } catch (err) {
+            console.error(`  ⚠️ Failed to generate TTS for segment ${i}:`, err.message);
           }
         }
       }
@@ -395,8 +451,12 @@ router.post('/ad-audio', async (req, res) => {
       let filters = [];
       
       if (availableTime > 0 && ttsDuration > targetDuration) {
-        // Speed up slightly (up to 1.15x for a natural, professional sound)
-        const tempo = Math.min(1.15, ttsDuration / targetDuration);
+        if (ttsDuration > targetDuration * 1.35) {
+           console.log(`  Skipping AD at ${ad.start} because TTS duration (${ttsDuration.toFixed(2)}s) is too long for gap (${targetDuration.toFixed(2)}s)`);
+           continue; // Skip this AD completely to avoid cutting it or overlapping
+        }
+        // Speed up slightly (up to 1.35x for a natural, professional sound)
+        const tempo = Math.min(1.35, ttsDuration / targetDuration);
         if (tempo > 1.01) {
           filters.push(`atempo=${tempo.toFixed(3)}`);
         }
@@ -715,7 +775,7 @@ router.post('/accessible-video', async (req, res) => {
       }
       if (hasAudioTrack) {
         filterComplex += `[ad_combined]asplit[ad_control][ad_heard];`;
-        filterComplex += `[0:a][ad_control]sidechaincompress=threshold=0.03:ratio=10:attack=100:release=500[ducked_orig];`;
+        filterComplex += `[0:a][ad_control]sidechaincompress=threshold=0.05:ratio=5:attack=10:release=50[ducked_orig];`;
         filterComplex += `[ducked_orig][ad_heard]amix=inputs=2:dropout_transition=99999:duration=longest[final_raw_aout];[final_raw_aout]volume=2.0[padded_final];`;
       } else {
         filterComplex += `[ad_combined]volume=1.0[padded_final];`;

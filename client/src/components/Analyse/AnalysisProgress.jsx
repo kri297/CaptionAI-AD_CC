@@ -15,9 +15,15 @@ const LANG_FLAGS = {
   'Korean': '🇰🇷', 'Chinese': '🇨🇳', 'Arabic': '🇸🇦', 'Portuguese': '🇧🇷',
   'German': '🇩🇪', 'Italian': '🇮🇹', 'Russian': '🇷🇺', 'Kannada': '🇮🇳',
   'Gujarati': '🇮🇳', 'Marathi': '🇮🇳', 'Bengali': '🇮🇳', 'Malayalam': '🇮🇳',
-  'Urdu': '🇵🇰', 'Punjabi': '🇮🇳', 'Thai': '🇹🇭', 'Vietnamese': '🇻🇳',
-  'Turkish': '🇹🇷', 'Indonesian': '🇮🇩', 'Dutch': '🇳🇱', 'Polish': '🇵🇱',
-  'Swedish': '🇸🇪',
+  'Urdu': '🇵🇰', 'Nepali': '🇳🇵', 'Sinhala': '🇱🇰', 'Punjabi': '🇮🇳',
+  'Thai': '🇹🇭', 'Vietnamese': '🇻🇳', 'Indonesian': '🇮🇩',
+  'Malay': '🇲🇾', 'Filipino': '🇵🇭', 'Khmer': '🇰🇭', 'Burmese': '🇲🇲',
+  'Dutch': '🇳🇱', 'Polish': '🇵🇱', 'Swedish': '🇸🇪', 'Danish': '🇩🇰',
+  'Finnish': '🇫🇮', 'Norwegian': '🇳🇴', 'Greek': '🇬🇷', 'Czech': '🇨🇿',
+  'Romanian': '🇷🇴', 'Hungarian': '🇭🇺', 'Ukrainian': '🇺🇦', 'Croatian': '🇭🇷',
+  'Slovak': '🇸🇰', 'Catalan': '🇪🇸', 'Serbian': '🇷🇸', 'Latvian': '🇱🇻',
+  'Lithuanian': '🇱🇹', 'Icelandic': '🇮🇸', 'Afrikaans': '🇿🇦', 'Swahili': '🇰🇪',
+  'Amharic': '🇪🇹', 'Hebrew': '🇮🇱', 'Welsh': '🏴󠁧󠁢󠁷󠁬󠁳󠁿'
 };
 
 export default function AnalysisProgress({ filename, videoUrl, stage, targetLanguage }) {

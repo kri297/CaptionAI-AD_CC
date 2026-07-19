@@ -5,6 +5,19 @@ const path = require('path');
 const fs = require('fs');
 const { GoogleGenAI } = require('@google/genai');
 const { EdgeTTS } = require('node-edge-tts');
+const googleTTS = require('google-tts-api');
+
+const GOOGLE_TTS_VOICES = { 'Punjabi': 'pa' };
+async function generateTtsFile(text, voice, outputPath) {
+  if (GOOGLE_TTS_VOICES[voice]) {
+    const base64 = await googleTTS.getAudioBase64(text, { lang: GOOGLE_TTS_VOICES[voice], slow: false });
+    fs.writeFileSync(outputPath, Buffer.from(base64, 'base64'));
+  } else {
+    const tts = new EdgeTTS({ voice });
+    await tts.ttsPromise(text, outputPath);
+  }
+}
+
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
@@ -191,7 +204,7 @@ async function runPrompt(ai, fileRef, prompt, schema = null, retries = 3) {
 const getCombinedPrompt = (lang, maxDurationStr) => {
   const needsTranslation = lang && lang !== 'Auto-Detect';
   const translationInst = needsTranslation 
-    ? `IMPORTANT: Translate all spoken dialogue and audio descriptions into perfectly fluent ${lang}. The final output text MUST be written in ${lang} script. Localize cultural idioms and nuances naturally instead of translating literally.` 
+    ? `IMPORTANT: Translate all spoken dialogue (CC) and audio descriptions (AC) into perfectly fluent ${lang}. The final output text MUST be written in the ${lang} script. Localize cultural idioms naturally.` 
     : `IMPORTANT: Transcribe dialogue in the original language spoken in the video. Write audio descriptions in English (or the original language if appropriate).`;
 
   return `You are a professional subtitler and audio describer for accessibility, following standards from industry leading apps like CineDubs and Netflix. Carefully watch and listen to this entire video and perform THREE tasks:
@@ -203,21 +216,22 @@ Transcribe all spoken dialogue (Closed Captions - CC). If translation is request
 Generate Audio Descriptions (AC) for the silent gaps and non-speech events (such as visual actions, critical scene changes, character movements, expressions, background music, or sound effects). Be extremely thorough and capture all key visual details and sounds during every pause; do not leave silent gaps undescribed if there is visual context happening.
 
 CRITICAL INSTRUCTION: The video is EXACTLY ${maxDurationStr} long. You MUST NOT generate any timestamps that exceed ${maxDurationStr}. Keep timestamps realistic and tightly aligned with the video.
+CRITICAL INSTRUCTION: Identify characters by their specific names if they are mentioned, known, or visually recognizable. Use these correct character names consistently when describing incidents, actions, or dialogue speakers, rather than using generic terms like 'man' or 'woman'.
 
 Rules for Closed Captions (cc):
 - Each entry represents one sentence or a natural speech pause.
 - Timestamps MUST be in HH:MM:SS,mmm format (e.g., 00:00:03,500).
 - Use EXACT start and end times for when the words are actually spoken.
 - Analyze the vocal tone and context to assign ONE of these emotions: "neutral", "angry", "whisper", "excited", or "sad".
-- Specify the speaker in the 'speaker' field (e.g., "Speaker 1").
+- Specify the speaker in the 'speaker' field (e.g., "John" or "Speaker 1"). Use the correct character name if known.
 - Do NOT include sound descriptions in CC — speech only.
 
 Rules for Audio Descriptions (ac):
-- ONLY generate descriptions for silent gaps where no dialogue (CC) is present. There must be ABSOLUTELY ZERO overlap between CC and AC timestamps.
+- ONLY generate descriptions for silent gaps where no dialogue (CC) is present. Ensure CC and AC timestamps do not overlap.
 - MINIMUM GAP REQUIREMENT: DO NOT generate Audio Descriptions for any gap that is shorter than 1.5 seconds. If the silent gap is less than 1.5 seconds, leave it completely blank.
-- CRITICAL LENGTH CONSTRAINT: You MUST calculate the exact duration of the gap (End Time - Start Time). You are only allowed to write TWO (2) WORDS per second of gap time. For example: A 2-second gap = MAX 4 words. A 3-second gap = MAX 6 words. If you write more than this limit, the AI voice will be brutally cut off mid-sentence. Keep descriptions EXTREMELY punchy and concise (e.g. "[Man smiles warmly]").
+- CRITICAL LENGTH CONSTRAINT: You MUST calculate the exact duration of the gap (End Time - Start Time). You are only allowed to write TWO (2) WORDS per second of gap time. For example: A 2-second gap = MAX 4 words. A 3-second gap = MAX 6 words. If you write more than this limit, the AI voice will be brutally cut off mid-sentence. Keep descriptions EXTREMELY punchy and concise (e.g. "[John smiles warmly]").
 - BACKGROUND MUSIC & SOUNDS: If there is background music, ambient sound, or a specific audio effect playing during a gap, you MUST describe it (e.g. "[Soft acoustic guitar melody plays]", "[Uplifting cinematic music swells]", or "[Eerie wind blowing]").
-- ON-SCREEN TEXT & ACTION DETAILS: Scan the video carefully for key visual elements occurring during silences or pauses. You MUST accurately read any important text written on the screen (especially at the end of the video). IMPORTANT: Do NOT use prefixes like 'Text on screen:' or 'Lekh:' or 'Written:'. Just output the text naturally. Also describe actions critical to the plot, character movements, and expressions (e.g., "[Subscribe for more]", "[Rahul smiles warmly]").
+- ON-SCREEN TEXT & ACTION DETAILS: Scan the video carefully for key visual elements occurring during silences or pauses. You MUST accurately read any important text written on the screen (especially at the end of the video). IMPORTANT: Do NOT use prefixes like 'Text on screen:' or 'Lekh:' or 'Written:'. Just output the text naturally. Also describe actions critical to the plot, character movements, and expressions (e.g., "[Subscribe for more]", "[Rahul smiles warmly]"). Ensure you use the correct character name during incidents.
 - ACCURACY & NO HALLUCINATIONS: Describe what is explicitly visible or audible. Do not guess or hallucinate context. Watch every frame up to the very last second of the video, ensuring any final text or visuals are captured accurately.
 - Wrap descriptions in square brackets.
 
@@ -330,7 +344,7 @@ const renderAccessibilityAssets = (fileId, inputVideoPath, cc, ac, videoDuration
         const adPath = path.join(UPLOAD_DIR, ad.audioFile);
         if (fs.existsSync(adPath) && fs.statSync(adPath).size > 0) {
           const delayMs = Math.round(parseTimestamp(ad.start) * 1000);
-          const nextEvent = sortedCaptions.find(c => c.start > parseTimestamp(ad.start) + 0.05);
+          const nextEvent = sortedCaptions.find(c => c.type === 'cc' && c.start > parseTimestamp(ad.start) + 0.05);
           const nextEventStart = nextEvent ? nextEvent.start : videoDuration;
           const availableTime = Math.max(0, nextEventStart - parseTimestamp(ad.start));
           
@@ -347,7 +361,11 @@ const renderAccessibilityAssets = (fileId, inputVideoPath, cc, ac, videoDuration
           let filters = [];
           
           if (availableTime > 0 && ttsDuration > targetDuration) {
-            const tempo = Math.min(1.15, ttsDuration / targetDuration);
+            if (ttsDuration > targetDuration * 1.35) {
+               console.log(`  Skipping AD at ${ad.start} because TTS duration (${ttsDuration.toFixed(2)}s) is too long for gap (${targetDuration.toFixed(2)}s)`);
+               continue; // Skip this AD completely to avoid cutting it or overlapping
+            }
+            const tempo = Math.min(1.35, ttsDuration / targetDuration);
             if (tempo > 1.01) {
               filters.push(`atempo=${tempo.toFixed(3)}`);
             }
@@ -380,7 +398,7 @@ const renderAccessibilityAssets = (fileId, inputVideoPath, cc, ac, videoDuration
         filterComplex += `[ad_combined]asplit[ad_control][ad_heard];`;
         
         if (hasAudioTrack) {
-          filterComplex += `[0:a][ad_control]sidechaincompress=threshold=0.03:ratio=10:attack=100:release=500[ducked_orig];`;
+          filterComplex += `[0:a][ad_control]sidechaincompress=threshold=0.05:ratio=5:attack=10:release=50[ducked_orig];`;
           filterComplex += `[ducked_orig][ad_heard]amix=inputs=2:dropout_transition=99999:duration=longest[final_raw_aout];[final_raw_aout]volume=2.0[padded_final];`;
         } else {
           filterComplex += `[ad_heard]volume=1.0[padded_final];`;
@@ -575,6 +593,7 @@ Rules:
 router.post('/process', upload.single('video'), async (req, res) => {
   const tempPath = req.file?.path;
   const targetLanguage = req.body.targetLanguage;
+  const selectedVoice = req.body.selectedVoice;
 
   // Extend timeout for long videos (10 minutes)
   req.socket.setTimeout(600000);
@@ -698,15 +717,25 @@ router.post('/process', upload.single('video'), async (req, res) => {
     
     console.log(`  ✅ Done — CC: ${cc.length}, AD: ${ac.length}`);
 
-    // Map target languages to natural-sounding EdgeTTS voice profiles (male)
     const voiceMap = {
+      // Indian & South Asian
       'Hindi': 'hi-IN-MadhurNeural',
       'Telugu': 'te-IN-MohanNeural',
       'Tamil': 'ta-IN-ValluvarNeural',
+      'Kannada': 'kn-IN-GaganNeural',
+      'Malayalam': 'ml-IN-MidhunNeural',
+      'Bengali': 'bn-IN-BashkarNeural',
+      'Gujarati': 'gu-IN-NiranjanNeural',
+      'Marathi': 'mr-IN-ManoharNeural',
+      'Urdu': 'ur-PK-AsadNeural',
+      'Nepali': 'ne-NP-SagarNeural',
+      'Sinhala': 'si-LK-SameeraNeural',
+      'Punjabi': 'Punjabi',  // Google TTS fallback marker
+      // Popular
+      'English': 'en-US-GuyNeural',
       'Spanish': 'es-ES-AlvaroNeural',
       'French': 'fr-FR-HenriNeural',
       'Japanese': 'ja-JP-KeitaNeural',
-      'English': 'en-US-GuyNeural',
       'Korean': 'ko-KR-InJoonNeural',
       'Chinese': 'zh-CN-YunxiNeural',
       'Portuguese': 'pt-BR-AntonioNeural',
@@ -714,25 +743,48 @@ router.post('/process', upload.single('video'), async (req, res) => {
       'Arabic': 'ar-SA-HamedNeural',
       'Russian': 'ru-RU-DmitryNeural',
       'Italian': 'it-IT-ValerioNeural',
-      'Kannada': 'kn-IN-GaganNeural',
-      'Gujarati': 'gu-IN-NiranjanNeural',
-      'Marathi': 'mr-IN-ManoharNeural',
-      'Bengali': 'bn-IN-BashkarNeural',
-      'Malayalam': 'ml-IN-MidhunNeural',
-      'Urdu': 'ur-PK-AsadNeural',
-      'Punjabi': 'pa-IN-GurpreetNeural',
+      // Asian
       'Thai': 'th-TH-NiwatNeural',
       'Vietnamese': 'vi-VN-NamMinhNeural',
-      'Turkish': 'tr-TR-AhmetNeural',
       'Indonesian': 'id-ID-ArdiNeural',
+      'Malay': 'ms-MY-OsmanNeural',
+      'Filipino': 'fil-PH-BlessicaNeural',
+      'Khmer': 'km-KH-PisethNeural',
+      'Burmese': 'my-MM-ThihaNeural',
+      // European
       'Dutch': 'nl-NL-MaartenNeural',
       'Polish': 'pl-PL-MarekNeural',
       'Swedish': 'sv-SE-MattiasNeural',
+      'Danish': 'da-DK-JeppeNeural',
+      'Finnish': 'fi-FI-HarriNeural',
+      'Norwegian': 'nb-NO-FinnNeural',
+      'Greek': 'el-GR-NestorasNeural',
+      'Czech': 'cs-CZ-AntoninNeural',
+      'Romanian': 'ro-RO-EmilNeural',
+      'Hungarian': 'hu-HU-TamasNeural',
+      'Ukrainian': 'uk-UA-OstapNeural',
+      'Croatian': 'hr-HR-SreckoNeural',
+      'Slovak': 'sk-SK-LukasNeural',
+      'Catalan': 'ca-ES-EnricNeural',
+      'Serbian': 'sr-RS-NicholasNeural',
+      'Latvian': 'lv-LV-NilsNeural',
+      'Lithuanian': 'lt-LT-LeonasNeural',
+      'Icelandic': 'is-IS-GunnarNeural',
+      // African
+      'Afrikaans': 'af-ZA-WillemNeural',
+      'Swahili': 'sw-KE-RafikiNeural',
+      'Amharic': 'am-ET-AmehaNeural',
+      // Middle Eastern
+      'Hebrew': 'he-IL-AvriNeural',
+      // Celtic
+      'Welsh': 'cy-GB-AledNeural',
       'Auto-Detect': 'en-US-GuyNeural'
     };
 
     let ttsVoice = voiceMap[targetLanguage] || 'en-US-GuyNeural';
-    if (targetLanguage === 'Auto-Detect' || !targetLanguage) {
+    if (selectedVoice && selectedVoice !== 'Auto-Detect') {
+      ttsVoice = selectedVoice;
+    } else if (targetLanguage === 'Auto-Detect' || !targetLanguage) {
       let sampleText = '';
       for (let a of ac) {
         sampleText = (a.description || a.text || '').replace(/^\[|\]$/g, '').trim();
@@ -745,11 +797,17 @@ router.post('/process', upload.single('video'), async (req, res) => {
       const hasKannada = /[\u0C80-\u0CFF]/.test(sampleText);
       const hasGujarati = /[\u0A80-\u0AFF]/.test(sampleText);
       const hasPunjabi = /[\u0A00-\u0A7F]/.test(sampleText);
+      const hasSinhala = /[\u0D80-\u0DFF]/.test(sampleText);
+      const hasArabic = /[\u0600-\u06FF]/.test(sampleText);
+      const hasHebrew = /[\u0590-\u05FF]/.test(sampleText);
       const hasKorean = /[\uAC00-\uD7AF\u3130-\u318F]/.test(sampleText);
       const hasChinese = /[\u4E00-\u9FFF\u3400-\u4DBF]/.test(sampleText);
       const hasJapanese = /[\u3040-\u309F\u30A0-\u30FF]/.test(sampleText);
       const hasThai = /[\u0E00-\u0E7F]/.test(sampleText);
-      const hasArabic = /[\u0600-\u06FF]/.test(sampleText);
+      const hasKhmer = /[\u1780-\u17FF]/.test(sampleText);
+      const hasMyanmar = /[\u1000-\u109F]/.test(sampleText);
+      const hasAmharic = /[\u1200-\u137F]/.test(sampleText);
+      const hasGreek = /[\u0370-\u03FF]/.test(sampleText);
       const hasHindi = /[\u0900-\u097F]/.test(sampleText);
 
       if (hasTamil) ttsVoice = 'ta-IN-ValluvarNeural';
@@ -758,12 +816,18 @@ router.post('/process', upload.single('video'), async (req, res) => {
       else if (hasBengali) ttsVoice = 'bn-IN-BashkarNeural';
       else if (hasKannada) ttsVoice = 'kn-IN-GaganNeural';
       else if (hasGujarati) ttsVoice = 'gu-IN-NiranjanNeural';
-      else if (hasPunjabi) ttsVoice = 'pa-IN-GurpreetNeural';
+      else if (hasPunjabi) ttsVoice = 'Punjabi';
+      else if (hasSinhala) ttsVoice = 'si-LK-SameeraNeural';
       else if (hasKorean) ttsVoice = 'ko-KR-InJoonNeural';
       else if (hasChinese) ttsVoice = 'zh-CN-YunxiNeural';
       else if (hasJapanese) ttsVoice = 'ja-JP-KeitaNeural';
       else if (hasThai) ttsVoice = 'th-TH-NiwatNeural';
+      else if (hasKhmer) ttsVoice = 'km-KH-PisethNeural';
+      else if (hasMyanmar) ttsVoice = 'my-MM-ThihaNeural';
       else if (hasArabic) ttsVoice = 'ar-SA-HamedNeural';
+      else if (hasHebrew) ttsVoice = 'he-IL-AvriNeural';
+      else if (hasAmharic) ttsVoice = 'am-ET-AmehaNeural';
+      else if (hasGreek) ttsVoice = 'el-GR-NestorasNeural';
       else if (hasHindi) ttsVoice = 'hi-IN-MadhurNeural';
       else ttsVoice = 'en-US-GuyNeural';
     }
@@ -779,8 +843,7 @@ router.post('/process', upload.single('video'), async (req, res) => {
           const ttsFilename = `${path.basename(tempPath)}_ad_${i}.mp3`;
           const ttsPath = path.join(UPLOAD_DIR, ttsFilename);
           
-          const tts = new EdgeTTS({ voice: ttsVoice });
-          await tts.ttsPromise(text, ttsPath);
+          await generateTtsFile(text, ttsVoice, ttsPath);
           
           ac[i].audioFile = ttsFilename; // Attach reference for export
         } catch (ttsErr) {

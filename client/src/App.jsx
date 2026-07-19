@@ -111,6 +111,9 @@ export default function App() {
       if (language && language !== 'Auto-Detect') {
         body.append('targetLanguage', language);
       }
+      if (selectedVoice && selectedVoice !== 'Auto-Detect') {
+        body.append('selectedVoice', selectedVoice);
+      }
       if (apiKey) {
         body.append('apiKey', apiKey);
       }
